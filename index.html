@@ -8,28 +8,34 @@
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
-            padding: 20px;
+            padding: 40px;
             text-align: center;
+            font-size: 14px;
         }
         h2 {
             color: #333;
+            font-size: 22px;
+        }
+        h2 span {
+            font-weight: bold;
         }
         table {
-            width: 100%;
-            max-width: 800px;
-            margin: 20px auto;
+            width: 70%;
+            max-width: 900px;
+            margin: 30px auto;
             border-collapse: collapse;
             background: #fff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
             overflow: hidden;
         }
         th, td {
             padding: 12px;
             text-align: center;
+            font-size: 14px;
         }
         th {
-            background-color: #007BFF;
+            background-color: #9b59b6;
             color: white;
         }
         tr:nth-child(even) {
@@ -37,95 +43,106 @@
         }
         input[type="number"] {
             width: 60px;
-            padding: 5px;
+            padding: 6px;
             text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: none;
+            background-color: transparent;
+            font-size: 13px;
         }
-        .note {
-            margin-top: 20px;
-            font-size: 14px;
+        .note-top {
+            font-size: 13px;
             color: #555;
+            margin-bottom: 10px;
         }
-        .hidden {
-            display: none;
+        .note-bottom {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #555;
+            text-align: center;
+        }
+        .note-bottom ul {
+            list-style-type: disc;
+            display: inline-block;
+            text-align: left;
+            margin: 0 auto;
+            padding-left: 20px;
+        }
+        .uncertainty {
+            font-size: 12px;
+            color: #777;
         }
     </style>
 </head>
 <body>
-    <h2>3D Print Price Estimator</h2>
+    <h2>3D Print Price <span>Estimator</span></h2>
+    <p class="note-top"><strong>NOTE:</strong> Price estimation is <strong>NOT</strong> the final price. Additional fees may apply.</p>
+
     <table>
         <thead>
             <tr>
-                <th>GUIDE</th>
-                <th>FILAMENT COST (grams)</th>
-                <th>PRINT TIME (hours)</th>
-                <th>Keychain (pcs)</th>
-                <th>Switch (pcs)</th>
-                <th>Magnet (pcs)</th>
-                <th class="hidden">COST (Rp)</th>
-                <th>PRICE (Rp)</th>
-                <th class="hidden">FORMULA</th>
+                <th>MATERIAL COST (g)</th>
+                <th>PRINT TIME (h)</th>
+                <th>ESTIMATED PRICE</th>
             </tr>
         </thead>
-        <tbody id="table-body"></tbody>
+        <tbody>
+            <tr>
+                <td><input type="number" id="filament" value="0"></td>
+                <td><input type="number" id="print-time" value="0"></td>
+                <td><span id="price">Rp 0</span><br><span class="uncertainty" id="uncertainty">±Rp 0</span></td>
+            </tr>
+        </tbody>
     </table>
-    <p class="note">Price Estimation is <strong>NOT</strong> final price, however, the price will never exceed the estimation. Price will only decrease or stay the same.</p>
+
+    <div class="note-bottom">
+        <ul>
+            <li><strong>All print models are customizable</strong> in size and infill density. Please consult to adjust pricing.</li>
+            <li><strong>AMS (Multicolor)</strong> prints have a lower per-object cost as order quantity increases due to reduced material waste and printing time.</li>
+        </ul>
+    </div>
+
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const data = ["0-15g", "16-50g", "51-100g", "101-300g", "301-500g", "> 500g"];
-            const addonCosts = { keychain: 2000, switch: 3000, magnet: 2500 };
-            const hourlyCosts = { "0-15g": 4000, "16-50g": 3500, "51-100g": 3000, "101-300g": 2850, "301-500g": 2600, "> 500g": 2600 };
-            const margins = { "0-15g": 4, "16-50g": 3, "51-100g": 2.8, "101-300g": 2.7, "301-500g": 2.6, "> 500g": 2.5 };
-            
-            const tableBody = document.getElementById("table-body");
-            data.forEach((guide, index) => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${guide}</td>
-                    <td><input type="number" class="filament" data-index="${index}" value="0"></td>
-                    <td><input type="number" class="print-time" data-index="${index}" value="0"></td>
-                    <td><input type="number" class="addon" data-addon="keychain" data-index="${index}" value="0"></td>
-                    <td><input type="number" class="addon" data-addon="switch" data-index="${index}" value="0"></td>
-                    <td><input type="number" class="addon" data-addon="magnet" data-index="${index}" value="0"></td>
-                    <td id="cost-${index}" class="hidden">0</td>
-                    <td id="price-${index}">0</td>
-                    <td id="formula-${index}" class="hidden"></td>
-                `;
-                tableBody.appendChild(tr);
-            });
+        const guideTable = [
+            { max: 10, margin: 4.5, hourly: 5000 },
+            { max: 30, margin: 3.15, hourly: 3750 },
+            { max: 50, margin: 3.0, hourly: 3350 },
+            { max: 70, margin: 2.9, hourly: 3350 },
+            { max: 100, margin: 2.8, hourly: 3350 },
+            { max: 150, margin: 2.75, hourly: 3200 },
+            { max: 300, margin: 2.7, hourly: 3000 },
+            { max: 500, margin: 2.65, hourly: 3000 },
+            { max: Infinity, margin: 2.6, hourly: 2800 }
+        ];
 
-            function formatCurrency(value) {
-                return value.toLocaleString("id-ID").replace(/\./g, ",");
-            }
+        function formatCurrency(value) {
+            return `Rp ${value.toLocaleString("id-ID")}`;
+        }
 
-            function calculatePrice() {
-                document.querySelectorAll("#table-body tr").forEach((row, index) => {
-                    const guide = data[index];
-                    const filament = Number(row.querySelector(".filament").value);
-                    const printTime = Number(row.querySelector(".print-time").value);
-                    const hourlyCost = hourlyCosts[guide] || 3000;
-                    const marginMultiplier = margins[guide] || 3;
+        function roundToNearest100(num) {
+            return Math.round(num / 100) * 100;
+        }
 
-                    let baseCost = (((filament * 1.1) / 1000) * 160000) + (printTime * hourlyCost);
-                    let totalCost = baseCost;
-                    let totalPrice = Math.round(baseCost * marginMultiplier);
-                    
-                    row.querySelectorAll(".addon").forEach(input => {
-                        const qty = Number(input.value);
-                        if (qty > 0) {
-                            const cost = addonCosts[input.dataset.addon] * qty;
-                            totalPrice += cost;
-                        }
-                    });
-                    
-                    document.getElementById(`cost-${index}`).textContent = formatCurrency(Math.round(totalCost));
-                    document.getElementById(`price-${index}`).textContent = formatCurrency(totalPrice);
-                });
-            }
+        function getGuideInfo(filament) {
+            return guideTable.find(entry => filament <= entry.max);
+        }
 
-            document.addEventListener("input", calculatePrice);
-        });
+        function calculatePrice() {
+            const filament = Number(document.getElementById("filament").value);
+            const printTime = Number(document.getElementById("print-time").value);
+
+            const guide = getGuideInfo(filament);
+            const filamentCost = ((filament * 1.1) / 1000) * 160000;
+            const printCost = printTime * guide.hourly;
+            const baseCost = filamentCost + printCost;
+            const price = roundToNearest100(baseCost * guide.margin);
+
+            const uncertainty = roundToNearest100(price * 0.1);
+
+            document.getElementById("price").textContent = formatCurrency(price);
+            document.getElementById("uncertainty").textContent = `±${formatCurrency(uncertainty)}`;
+        }
+
+        document.addEventListener("input", calculatePrice);
     </script>
 </body>
 </html>
